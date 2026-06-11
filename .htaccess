@@ -1,0 +1,4 @@
+RewriteEngine On
+
+# Redirect all traffic to Node.js app running on port 3000
+RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
