@@ -1,27 +1,69 @@
-name: Deploy to Sempoi Hosting
+name: Build and Deploy to deploy branch
 
 on:
   push:
     branches:
       - main
 
+permissions:
+  contents: write
+
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            cd /home/${{ secrets.SSH_USERNAME }}/gpk.mohdhilmi.com
-            git pull origin main
-            npm install --production
-            npm run build
-            pm2 restart gpk-pendidikan-khas || pm2 start ecosystem.config.js
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Prepare deploy directory
+        run: |
+          mkdir -p deploy-output
+          cp -r .next deploy-output/.next
+          cp server.js deploy-output/server.js
+          cp next.config.js deploy-output/next.config.js
+          cp .htaccess deploy-output/.htaccess
+          if [ -d "public" ]; then
+            cp -r public deploy-output/public
+          fi
+
+      - name: Generate deploy package.json
+        run: |
+          node -e "
+          const pkg = {
+            name: 'gpk-pendidikan-khas',
+            version: '1.0.0',
+            private: true,
+            description: 'One Stop Center GPK Pendidikan Khas - Production Runtime',
+            scripts: { start: 'node server.js' },
+            dependencies: {
+              next: '14.1.0',
+              react: '^18.2.0',
+              'react-dom': '^18.2.0'
+            }
+          };
+          require('fs').writeFileSync('deploy-output/package.json', JSON.stringify(pkg, null, 2));
+          "
+
+      - name: Generate deploy .gitignore
+        run: |
+          printf 'node_modules/\n.env*.local\n.env\n.DS_Store\nnpm-debug.log*\n' > deploy-output/.gitignore
+
+      - name: Deploy to deploy branch
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: deploy
+          folder: deploy-output
+          clean: true
+          commit-message: "deploy: build from ${{ github.sha }}"

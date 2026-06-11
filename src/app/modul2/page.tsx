@@ -3,11 +3,13 @@
 import { useState } from 'react'
 import DashboardLayout from '@/components/DashboardLayout'
 
-const demoPencerapan = [
-  { id: '1', tarikh: '2024-02-15', pegawai_penyelia: 'Pn. Salmah bt Ahmad (PGB)', status: 'Selesai' as const, catatan: 'Perancangan RPH tersusun', tindakan: 'Tambah ABM digital' },
-  { id: '2', tarikh: '2024-05-20', pegawai_penyelia: 'En. Razak bin Ismail (SIP+)', status: 'Selesai' as const, catatan: 'PdPc aktif, penglibatan murid baik', tindakan: 'Dokumentasi aktiviti' },
-  { id: '3', tarikh: '2024-08-10', pegawai_penyelia: 'Pn. Fatimah bt Hassan (SISC+)', status: 'Belum' as const, catatan: '', tindakan: '' },
-  { id: '4', tarikh: '2024-11-05', pegawai_penyelia: 'Pn. Salmah bt Ahmad (PGB)', status: 'Belum' as const, catatan: '', tindakan: '' },
+type PencerapanStatus = 'Selesai' | 'Belum' | 'Ditangguh'
+
+const demoPencerapan: Array<{ id: string; tarikh: string; pegawai_penyelia: string; status: PencerapanStatus; catatan: string; tindakan: string }> = [
+  { id: '1', tarikh: '2024-02-15', pegawai_penyelia: 'Pn. Salmah bt Ahmad (PGB)', status: 'Selesai', catatan: 'Perancangan RPH tersusun', tindakan: 'Tambah ABM digital' },
+  { id: '2', tarikh: '2024-05-20', pegawai_penyelia: 'En. Razak bin Ismail (SIP+)', status: 'Selesai', catatan: 'PdPc aktif, penglibatan murid baik', tindakan: 'Dokumentasi aktiviti' },
+  { id: '3', tarikh: '2024-08-10', pegawai_penyelia: 'Pn. Fatimah bt Hassan (SISC+)', status: 'Belum', catatan: '', tindakan: '' },
+  { id: '4', tarikh: '2024-11-05', pegawai_penyelia: 'Pn. Salmah bt Ahmad (PGB)', status: 'Belum', catatan: '', tindakan: '' },
 ]
 
 export default function Modul2Page() {
