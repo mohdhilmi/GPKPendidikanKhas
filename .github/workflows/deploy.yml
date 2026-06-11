@@ -67,3 +67,16 @@ jobs:
           folder: deploy-output
           clean: true
           commit-message: "deploy: build from ${{ github.sha }}"
+
+      - name: SSH to hosting and pull latest deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd /home/mohdhilm/gpk.mohdhilmi.com
+            git pull origin deploy
+            mkdir -p tmp
+            touch tmp/restart.txt
