@@ -1,241 +1,181 @@
-# Panduan Deploy ke Sempoi Hosting
+# Panduan Deploy ke Sempoi Hosting (Pilihan A - Pre-built)
 
 ## One Stop Center GPK Pendidikan Khas
 **URL**: https://gpk.mohdhilmi.com
 
 ---
 
-## Prasyarat
+## Kaedah: GitHub Actions Build + Deploy Branch
 
-- Akaun Sempoi Hosting dengan sokongan Node.js
-- Subdomain `gpk.mohdhilmi.com` sudah dibuat
-- Akses SSH atau Terminal di cPanel
+Projek ini menggunakan Next.js SSR (Server-Side Rendering).
+Build dilakukan **secara automatik di GitHub Actions**, kemudian output yang sudah compiled
+di-push ke branch `deploy`. Hosting hanya perlu `git pull` dan restart - **tanpa build di server**.
 
----
+### Kenapa kaedah ini?
 
-## Langkah 1: Setup Supabase
-
-1. Pergi ke [supabase.com](https://supabase.com) dan buat projek baru
-2. Buka **SQL Editor** dan jalankan semua SQL dari file `supabase-schema.sql`
-3. Buat **Storage Buckets**:
-   - `documents` (Private)
-   - `images` (Public)
-   - `certificates` (Private)
-4. Buat user di **Authentication > Users > Add User**:
-   - Email: `admin@gpk.mohdhilmi.com`
-   - Password: (pilih sendiri)
-5. Catat **Project URL** dan **Anon Key** dari Settings > API
+- Sempoi Hosting (CloudLinux) ada had proses/memori - tak boleh `npm run build`
+- CloudLinux NodeJS Selector guna symlink `node_modules` - tak boleh `npm install` biasa via SSH
+- Solusi: Build di GitHub (tiada had), push hasil ke branch khas, hosting tarik sahaja
 
 ---
 
-## Langkah 2: Upload Files ke Hosting
+## Aliran Kerja (Workflow)
 
-### Cara A: Git Clone (Recommended jika ada SSH)
+```
+Push ke main/feat/nextjs-rebuild
+        |
+        v
+GitHub Actions: npm install + npm run build
+        |
+        v
+Push ke branch "deploy" (mengandungi .next/, server.js, package.json minimal)
+        |
+        v
+Di hosting: git pull origin deploy + cPanel "Run NPM Install" + Restart App
+```
+
+---
+
+## Setup Pertama Kali (Di Hosting)
+
+### 1. Clone branch deploy
 
 ```bash
-cd /home/mohdhilmi/gpk.mohdhilmi.com
-git clone https://github.com/mohdhilmi/GPKPendidikanKhas.git .
+# SSH ke hosting (pastikan nodevenv TIDAK aktif)
+# Jika ada (nenv) di prompt, taip: deactivate
+
+cd /home/mohdhilmi
+git clone -b deploy https://github.com/mohdhilmi/GPKPendidikanKhas.git gpk.mohdhilmi.com
 ```
 
-### Cara B: Upload Manual
+### 2. Setup Node.js App di cPanel
 
-1. Download zip dari GitHub
-2. Upload melalui File Manager cPanel
-3. Extract ke folder subdomain `/home/mohdhilmi/gpk.mohdhilmi.com/`
-
----
-
-## Langkah 3: Setup Environment Variables
-
-Buat file `.env.local` di root folder:
-
-```bash
-cd /home/mohdhilmi/gpk.mohdhilmi.com
-nano .env.local
-```
-
-Isi dengan:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
-```
-
----
-
-## Langkah 4: Install Dependencies & Build
-
-SSH ke hosting dan jalankan:
-
-```bash
-cd /home/mohdhilmi/gpk.mohdhilmi.com
-
-# Pastikan Node.js version 18+
-node -v
-
-# Install dependencies
-npm install
-
-# Build production
-npm run build
-```
-
----
-
-## Langkah 5: Start Application
-
-### Menggunakan PM2 (Recommended)
-
-```bash
-# Install PM2 globally (jika belum ada)
-npm install -g pm2
-
-# Start app menggunakan ecosystem config
-pm2 start ecosystem.config.js
-
-# Pastikan app auto-start selepas server reboot
-pm2 save
-pm2 startup
-```
-
-### Menggunakan Node.js App Setup di cPanel
-
-Jika Sempoi Hosting ada **Setup Node.js App** di cPanel:
-
-1. Buka cPanel > **Setup Node.js App**
+1. Login cPanel > **Setup Node.js App**
 2. Klik **Create Application**
 3. Isi:
-   - **Node.js version**: 18 atau lebih tinggi
+   - **Node.js version**: 20.x (atau 18.x)
    - **Application mode**: Production
-   - **Application root**: `/home/mohdhilmi/gpk.mohdhilmi.com`
+   - **Application root**: `gpk.mohdhilmi.com`
    - **Application URL**: `gpk.mohdhilmi.com`
-   - **Application startup file**: `node_modules/.bin/next`
+   - **Application startup file**: `server.js`
 4. Klik **Create**
-5. Kemudian klik **Run NPM Install**
-6. Kemudian klik **Run Script** > `build`
-7. Start application
+5. Klik **Run NPM Install** (install only next, react, react-dom - sangat ringan)
+6. Klik **Restart App**
+
+### 3. Verify
+
+Buka https://gpk.mohdhilmi.com - sepatutnya app berfungsi.
 
 ---
 
-## Langkah 6: Configure Domain (jika perlu)
+## Update Website (Selepas Push Kod Baru)
 
-Jika subdomain belum point ke Node.js app, tambah `.htaccess` di root:
+### Automatik (jika SSH secrets ada di GitHub)
 
-```apache
-RewriteEngine On
-RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
-```
+Boleh tambah step SSH di workflow untuk auto-pull. Lihat bahagian "Auto Deploy via SSH" di bawah.
 
-**ATAU** jika cPanel Node.js App sudah auto-configure, langkah ini tidak perlu.
-
----
-
-## Langkah 7: Verify
-
-1. Buka `https://gpk.mohdhilmi.com`
-2. Login page sepatutnya muncul
-3. Klik "Masuk Demo (Tanpa Supabase)" untuk test tanpa database
-4. Atau login dengan email yang dibuat di Supabase
-
----
-
-## Pengurusan
-
-### Check Status App
+### Manual (disyorkan untuk permulaan)
 
 ```bash
-pm2 status
-pm2 logs gpk-pendidikan-khas
-```
+# SSH ke hosting
+# Pastikan nodevenv TIDAK aktif (taip: deactivate jika perlu)
 
-### Restart App
-
-```bash
-pm2 restart gpk-pendidikan-khas
-```
-
-### Update Code
-
-```bash
 cd /home/mohdhilmi/gpk.mohdhilmi.com
-git pull origin main
-npm install
-npm run build
-pm2 restart gpk-pendidikan-khas
+git pull origin deploy
 ```
+
+Kemudian di cPanel:
+1. **Setup Node.js App** > pilih app
+2. Klik **Run NPM Install** (jika package.json berubah)
+3. Klik **Restart App**
+
+---
+
+## Auto Deploy via SSH (Opsional)
+
+Jika mahu deploy automatik selepas build, tambah secrets di GitHub repo:
+
+1. Pergi ke GitHub > Settings > Secrets and variables > Actions
+2. Tambah secrets:
+   - `SSH_HOST`: hostname/IP Sempoi Hosting
+   - `SSH_USERNAME`: username cPanel
+   - `SSH_KEY`: private key SSH (jana di cPanel > SSH Access)
+   - `SSH_PORT`: port SSH (biasa 22)
+
+Kemudian workflow akan secara automatik SSH ke server dan jalankan `git pull`.
+
+**Nota**: Restart app masih perlu dilakukan melalui cPanel panel kerana CloudLinux
+tidak benarkan restart app melalui SSH biasa.
+
+---
+
+## Struktur Branch `deploy`
+
+Branch `deploy` mengandungi hanya fail runtime yang diperlukan:
+
+```
+deploy branch/
+├── .next/              <- Compiled Next.js output (pages, chunks, dll)
+├── public/             <- Static assets (jika ada)
+├── server.js           <- Node.js startup file untuk cPanel
+├── next.config.js      <- Next.js configuration
+├── .htaccess           <- Reverse proxy ke Node.js app
+├── package.json        <- Minimal (hanya next, react, react-dom)
+└── .gitignore          <- Tidak ignore .next/ folder
+```
+
+**Tiada** dalam branch deploy:
+- `src/` (source code - sudah compiled dalam .next/)
+- `node_modules/` (di-install oleh cPanel)
+- `tailwind.config.ts` (build tool sahaja)
+- `tsconfig.json` (build tool sahaja)
+- `postcss.config.js` (build tool sahaja)
 
 ---
 
 ## Troubleshooting
 
-### App tak start
+### App tidak start / Error 503
 
-```bash
-# Check logs
-pm2 logs gpk-pendidikan-khas --lines 50
+- Pastikan **Application startup file** di cPanel ialah `server.js`
+- Pastikan port dalam server.js sepadan dengan cPanel config
+- Check log di cPanel > Setup Node.js App > pilih app > View Log
 
-# Check port
-netstat -tlnp | grep 3000
-```
+### "Run NPM Install" gagal
 
-### Error: Module not found
+- Package.json dalam branch deploy sangat ringan (3 dependencies sahaja)
+- Jika masih gagal, mungkin disk quota penuh
+- Check disk usage di cPanel > Disk Usage
 
-```bash
-rm -rf node_modules
-npm install
-npm run build
-```
+### Halaman 404 / routing tidak berfungsi
 
-### 502 Bad Gateway
+- Pastikan `.htaccess` ada di root aplikasi
+- Pastikan `mod_proxy` aktif di hosting
+- Jika guna subdomain, pastikan document root point ke folder yang betul
 
-- Pastikan app sudah running (`pm2 status`)
-- Pastikan port dalam `.htaccess` sama dengan port app (3000)
-- Check jika cPanel Node.js App panel ada, guna tu instead of manual PM2
+### git pull gagal
 
-### Permission Error
-
-```bash
-chmod -R 755 /home/mohdhilmi/gpk.mohdhilmi.com
-chmod -R 755 .next/
-```
+- Pastikan `deactivate` nodevenv sebelum git commands
+- Jika `node_modules` symlink menghalang: `unlink node_modules` kemudian git pull, 
+  kemudian cPanel "Run NPM Install" untuk cipta semula symlink
 
 ---
 
-## Struktur Folder di Hosting
+## Kelebihan Kaedah Ini
 
-```
-/home/mohdhilmi/gpk.mohdhilmi.com/
-├── .env.local              ← Environment variables
-├── .next/                  ← Build output (auto-generated)
-├── ecosystem.config.js     ← PM2 config
-├── next.config.js
-├── package.json
-├── node_modules/           ← Dependencies
-├── src/
-│   ├── app/               ← Pages
-│   ├── components/        ← Shared components
-│   ├── lib/               ← Supabase client
-│   └── types/             ← TypeScript types
-├── supabase-schema.sql    ← Database setup
-└── DEPLOY.md              ← This file
-```
+- Tiada build di server (elak EAGAIN spawn error)
+- Tiada install banyak devDependencies di server
+- Package.json minimal - hanya 3 runtime deps (next, react, react-dom)
+- Sesuai untuk shared hosting dengan had proses/memori/inode
+- Build penuh dilakukan di GitHub Actions (tiada had resources)
+- Workflow automatik - push sahaja, GitHub Actions buat kerja
 
 ---
 
 ## Nota Penting
 
-1. **Jangan upload `node_modules/`** ke git - ia akan di-install di server
-2. **Jangan commit `.env.local`** - ia mengandungi keys
-3. **Build perlu dijalankan di server** selepas setiap code update
-4. Pastikan Node.js **version 18+** di hosting
-5. Jika guna cPanel Node.js App, ikut arahan panel tersebut
-
----
-
-## Support
-
-Jika ada masalah deployment:
-1. Check `pm2 logs` untuk error details
-2. Pastikan semua environment variables betul
-3. Pastikan `npm run build` berjaya tanpa error
-4. Contact Sempoi Hosting support jika masalah berkaitan server
+1. **JANGAN** build di server - hosting tak mampu (EAGAIN error)
+2. Branch `deploy` dijana automatik oleh GitHub Actions - jangan edit manually
+3. Deactivate nodevenv sebelum jalankan git commands via SSH
+4. Guna cPanel panel sahaja untuk npm install dan restart
+5. Jika package.json tidak berubah, tidak perlu "Run NPM Install" - restart sahaja sudah cukup
