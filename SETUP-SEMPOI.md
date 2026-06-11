@@ -88,7 +88,7 @@ Tambah 4 secrets:
 | Secret Name    | Value                                                |
 |---------------|------------------------------------------------------|
 | `SSH_HOST`    | IP atau hostname Sempoi (contoh: `s1.sempoihosting.com`) |
-| `SSH_USERNAME`| Username cPanel (contoh: `mohdhilmi`)                |
+| `SSH_USERNAME`| Username cPanel (contoh: `mohdhilm`)                |
 | `SSH_KEY`     | Private key dari Step 4 (full content)               |
 | `SSH_PORT`    | Port SSH (biasanya `22` atau `2222`)                 |
 
@@ -97,7 +97,7 @@ Tambah 4 secrets:
 ### Step 6: Buat directory `tmp` di hosting (untuk Passenger restart)
 
 ```bash
-cd /home/mohdhilmi/gpk.mohdhilmi.com
+cd /home/mohdhilm/gpk.mohdhilmi.com
 mkdir -p tmp
 ```
 
@@ -158,7 +158,7 @@ Jika atas sebab tertentu GitHub Actions SSH step gagal:
 # SSH ke hosting
 # Pastikan nodevenv TIDAK aktif (taip: deactivate jika perlu)
 
-cd /home/mohdhilmi/gpk.mohdhilmi.com
+cd /home/mohdhilm/gpk.mohdhilmi.com
 git pull origin deploy
 touch tmp/restart.txt
 ```
@@ -196,10 +196,10 @@ Atau di cPanel: **Setup Node.js App** > pilih app > **Restart App**
 
 ```bash
 # Set git safe directory
-git config --global --add safe.directory /home/mohdhilmi/gpk.mohdhilmi.com
+git config --global --add safe.directory /home/mohdhilm/gpk.mohdhilmi.com
 
 # Jika ada conflict
-cd /home/mohdhilmi/gpk.mohdhilmi.com
+cd /home/mohdhilm/gpk.mohdhilmi.com
 git reset --hard origin/deploy
 git pull origin deploy
 ```

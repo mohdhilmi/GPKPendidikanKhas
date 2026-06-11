@@ -99,7 +99,7 @@ Tambah 4 secrets:
 | Secret Name    | Value                                                |
 |---------------|------------------------------------------------------|
 | `SSH_HOST`    | IP atau hostname Sempoi (contoh: `s1.sempoihosting.com`) |
-| `SSH_USERNAME`| Username cPanel (contoh: `mohdhilmi`)                |
+| `SSH_USERNAME`| Username cPanel (contoh: `mohdhilm`)                |
 | `SSH_KEY`     | Private key dari Step 3 (full content)               |
 | `SSH_PORT`    | Port SSH (biasanya `22` atau `2222`)                 |
 
@@ -135,7 +135,7 @@ Jika atas sebab tertentu auto-deploy tidak berfungsi:
 # SSH ke hosting
 # Pastikan nodevenv TIDAK aktif (taip: deactivate jika perlu)
 
-cd /home/mohdhilmi/gpk.mohdhilmi.com
+cd /home/mohdhilm/gpk.mohdhilmi.com
 git pull origin deploy
 ```
 
